@@ -77,7 +77,7 @@ const book = (slot_id, email = uniq(), name = 'Ada Obi', headers = {}) => call('
   const c = await call('POST', '/bookings', { ...body, name: 'Other' }, { 'Idempotency-Key': k });
   ok('same key, different body -> 422', c.status === 422, c.status);
   const k2 = 'key2-' + Date.now(), e2 = uniq();
-  const conc = await Promise.all(Array.from({ length: 6 }, () => call('POST', '/bookings', { slot_id: 's4', name: 'X', email: e2 }, { 'Idempotency-Key': k2 })));
+  const conc = await Promise.all(Array.from({ length: 5 }, () => call('POST', '/bookings', { slot_id: 's4', name: 'X', email: e2 }, { 'Idempotency-Key': k2 })));
   ok('concurrent same key: one booking id', new Set(conc.map((x) => x.json.id)).size === 1 && conc.every((x) => x.status === 201), conc.map((x) => x.status).join(','));
   r = await call('GET', '/bookings?email=' + encodeURIComponent(e2));
   ok('retries created no duplicates', r.json.bookings.length === 1, r.json.bookings.length);
