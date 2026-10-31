@@ -3,3 +3,7 @@
 
 # Ada Library Information
 *.ali
+
+# Node Module
+node_modules/
+.env

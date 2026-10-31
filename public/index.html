@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clinic Booking</title>
+<style>
+:root{--bg:#f6f8f7;--card:#fff;--ink:#16302b;--mute:#5f7570;--accent:#0f766e;--line:#d9e2df;--bad:#b42318}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1a18;--card:#172623;--ink:#e6f1ee;--mute:#9bb2ac;--accent:#2dd4bf;--line:#2a3f3a;--bad:#f97066}}
+*{box-sizing:border-box}body{margin:0;font:16px system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+main{max-width:640px;margin:0 auto;padding:24px 16px}h1{margin:0 0 4px}p.sub{color:var(--mute);margin-top:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin:16px 0}
+.slot{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+.slot:last-child{border:0}input{width:100%;padding:10px;margin:6px 0 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+button{padding:8px 14px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer}
+button:disabled{opacity:.4;cursor:not-allowed}.err{color:var(--bad)}.ok{color:var(--accent);font-weight:600}.mute{color:var(--mute);font-size:14px}
+</style></head><body><main>
+<h1>Book an appointment</h1><p class="sub">Pick a slot, enter your details, get confirmation.</p>
+<div class="card"><label>API key<input id="key" type="password" placeholder="X-API-Key"></label>
+<button id="load">Load slots</button></div>
+<div class="card"><h3 style="margin-top:0">Available slots</h3><div id="slots" class="mute">Enter your key and load slots.</div></div>
+<div class="card" id="form" hidden><h3 style="margin-top:0">Your details</h3>
+<div class="mute" id="chosen"></div>
+<label>Name<input id="name" autocomplete="name"></label>
+<label>Email<input id="email" type="email" autocomplete="email"></label>
+<button id="book">Confirm booking</button><p id="msg"></p></div>
+<div class="card" id="conf" hidden></div>
+<script>
+const $=id=>document.getElementById(id);let chosen=null,idem=null;
+$('key').value=sessionStorage.getItem('k')||'';
+const api=(p,o={})=>fetch(p,{...o,headers:{'Content-Type':'application/json','X-API-Key':$('key').value,...(o.headers||{})}});
+const fmt=s=>new Date(s).toLocaleString([], {dateStyle:'medium',timeStyle:'short'});
+async function load(){
+  sessionStorage.setItem('k',$('key').value);
+  const r=await api('/slots');
+  if(!r.ok){$('slots').innerHTML='<span class="err">'+(await r.json()).error+'</span>';return}
+  const {slots}=await r.json();
+  $('slots').innerHTML=slots.length?'':'No slots.';
+  slots.forEach(s=>{const d=document.createElement('div');d.className='slot';
+    d.innerHTML=`<div><b>${s.provider}</b><br><span class="mute">${fmt(s.start)} – ${fmt(s.end)}</span></div>`;
+    const b=document.createElement('button');b.textContent=s.available?'Select':'Booked';b.disabled=!s.available;
+    b.onclick=()=>{chosen=s;idem=crypto.randomUUID();$('form').hidden=false;$('chosen').textContent=`${s.provider}, ${fmt(s.start)}`;$('msg').textContent=''};
+    d.appendChild(b);$('slots').appendChild(d)});
+}
+$('load').onclick=load;
+$('book').onclick=async()=>{
+  $('book').disabled=true;$('msg').textContent='';
+  try{
+    const r=await api('/bookings',{method:'POST',headers:{'Idempotency-Key':idem},
+      body:JSON.stringify({slot_id:chosen.id,name:$('name').value,email:$('email').value})});
+    const j=await r.json();
+    if(r.status===201){
+      $('form').hidden=true;$('conf').hidden=false;
+      $('conf').innerHTML=`<p class="ok">Booking confirmed ✓</p><p><b>${j.name}</b> (${j.email})<br>${chosen.provider}, ${fmt(chosen.start)}<br><span class="mute">Reference: ${j.id}</span></p>`;
+      load();
+    }else $('msg').innerHTML=`<span class="err">${j.error}${r.status===429?' (retry in '+r.headers.get('Retry-After')+'s)':''}</span>`;
+  }catch(e){$('msg').innerHTML='<span class="err">Network error, safe to retry.</span>'}
+  $('book').disabled=false;
+};
+</script></main></body></html>
