@@ -17,19 +17,20 @@ async function call(method, path, body, headers = {}, key = KEY) {
   return { status: r.status, json, headers: r.headers };
 }
 const future = (h) => new Date(Date.now() + h * 3600e3).toISOString();
-const slot = (id, hrs) => ({ id, provider: 'Dr Ade', start: future(hrs), end: future(hrs + 0.5) });
+const DOCS = ['Dr Ade', 'Dr Tony', 'Dr Okeke', 'Dr Afam'];
+const slot = (id, hrs) => ({ id, provider: DOCS[parseInt(id.slice(1), 10) % 4], start: future(hrs), end: future(hrs + 0.5) });
 let n = 0; const uniq = () => `user${Date.now()}${n++}@example.com`;
 const book = (slot_id, email = uniq(), name = 'Ada Obi', headers = {}) => call('POST', '/bookings', { slot_id, name, email }, headers);
 
 (async () => {
   // Setup
   const past = { id: 'past', provider: 'Dr Old', start: '2020-01-01T09:00:00Z', end: '2020-01-01T09:30:00Z' };
-  let r = await call('POST', '/reset', { slots: [past, ...Array.from({ length: 12 }, (_, i) => slot('s' + (i + 1), 24 + i))] });
+  let r = await call('POST', '/reset', { slots: [past, ...Array.from({ length: 20 }, (_, i) => slot('s' + (i + 1), 24 + i))] });
   ok('reset ok', r.status === 200, r.status);
 
   // Level 1
   r = await call('GET', '/slots');
-  ok('list slots earliest first', r.status === 200 && r.json.slots[0].id === 'past' && r.json.slots.length === 13, JSON.stringify(r.json).slice(0, 120));
+  ok('list slots earliest first', r.status === 200 && r.json.slots[0].id === 'past' && r.json.slots.length === 21, JSON.stringify(r.json).slice(0, 120));
   ok('slots have available flag', r.json.slots.every((s) => typeof s.available === 'boolean'));
   r = await book('s1', '  ADA@Example.COM ', '  Ada Obi  ');
   ok('book -> 201 confirmed', r.status === 201 && r.json.status === 'confirmed', JSON.stringify(r));

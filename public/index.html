@@ -32,8 +32,8 @@ async function load(){
   sessionStorage.setItem('k',$('key').value);
   const r=await api('/slots');
   if(!r.ok){$('slots').innerHTML='<span class="err">'+(await r.json()).error+'</span>';return}
-  const {slots}=await r.json();
-  $('slots').innerHTML=slots.length?'':'No slots.';
+  const all=(await r.json()).slots;const now=Date.now();const slots=all.filter(s=>new Date(s.start).getTime()>now);
+  $('slots').innerHTML=slots.length?'':'No upcoming slots.';
   slots.forEach(s=>{const d=document.createElement('div');d.className='slot';
     d.innerHTML=`<div><b>${s.provider}</b><br><span class="mute">${fmt(s.start)} – ${fmt(s.end)}</span></div>`;
     const b=document.createElement('button');b.textContent=s.available?'Select':'Booked';b.disabled=!s.available;

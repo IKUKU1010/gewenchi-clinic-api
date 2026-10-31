@@ -12,6 +12,7 @@ Your project should look like this:
 gewenchi-clinic-api/
   server.js
   package.json
+  seed.js
   test.js
   README.md
   public/
@@ -110,8 +111,6 @@ BASE_URL=https://your-url.onrender.com API_KEY=yoursecret node test.js
 ```powershell
 $env:BASE_URL="https://your-url.onrender.com"; $env:API_KEY="yoursecret"; node test.js
 ```
-
-Fix anything that shows `FAIL` before you submit.
 
 ### Running the tests on Windows, step by step
 
